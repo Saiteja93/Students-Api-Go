@@ -1,54 +1,38 @@
-package config
+package main
 
 import (
-	"flag"
+	"fmt"
 	"log"
-	"os"
+	"net/http"
 
-	"github.com/ilyakaznacheev/cleanenv"
+	"github.com/Saiteja93/Students-Api-Go/internal/config"
 )
 
-// Httpserver holds server-specific config
-type Httpserver struct {
-	Addr string `yaml:"addr" env:"HTTP_ADDR" `
-}
+func main() {
+    // load config
+    cfg:= config.MustLoad()
 
-// Config is the root application config
-type Config struct {
-	Env         string     `yaml:"env" env:"ENV" env-required:"true"`
-	Storagepath string     `yaml:"storage_path" env:"STORAGE_PATH" env-required:"true"`
-	Httpserver  Httpserver `yaml:"http_server"`
-}
+    //database setup
 
-// MustLoad loads config from ENV or file and exits on failure
-func MustLoad() *Config {
-	var configpath string
+    //setup router
+    router:= http.NewServeMux()
+    router.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+        w.Write([]byte("welcome to student api")) 
+    })
 
-	// 1. Check environment variable
-	configpath = os.Getenv("CONFIG_PATH")
+    //setup server
+    server := http.Server{
+        Addr: cfg.Addr,
+        Handler: router,
+    }
 
-	// 2. If not set, check CLI flag
-	if configpath == "" {
-		flags := flag.String("config", "", "path to the configuration file")
-		flag.Parse()
+    fmt.Println("server started")
 
-		configpath = *flags
-		if configpath == "" {
-			log.Fatal("config path is not set (use CONFIG_PATH env var or --config flag)")
-		}
-	}
+    err := server.ListenAndServe()
+    if err != nil{
+        log.Fatal("failed to start server")
+    }
 
-	// 3. Ensure the file exists
-	if _, err := os.Stat(configpath); os.IsNotExist(err) {
-		log.Fatalf("config file doesn't exist: %s", configpath)
-	}
+    
 
-	// 4. Parse the config
-	var cfg Config
-	err := cleanenv.ReadConfig(configpath, &cfg)
-	if err != nil {
-		log.Fatalf("cannot read config file: %s", err.Error())
-	}
-
-	return &cfg
 }
