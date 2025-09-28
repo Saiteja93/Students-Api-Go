@@ -38,13 +38,14 @@ func main() {
     signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
 
-    go func ()  {
+    go func() {
         err := server.ListenAndServe()
-        if err != nil{
-            log.Fatal("failed to start server")
-        
+        if err != nil && err != http.ErrServerClosed {
+            log.Fatalf("failed to start server: %v", err)
         }
     }()
+    
+   
 
     <- done
 
